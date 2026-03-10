@@ -1,3 +1,15 @@
 spring:
   application:
     name: ${SPRING_APPLICATION_NAME}
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO}
+
+server:
+  port: ${PORT:8080}
