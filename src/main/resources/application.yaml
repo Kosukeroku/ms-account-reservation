@@ -11,5 +11,9 @@ spring:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO}
 
+  liquibase:
+    change-log: ${LIQUIBASE_CHANGELOG}
+    enabled: ${LIQUIBASE_ENABLED}
+
 server:
   port: ${PORT:8080}
