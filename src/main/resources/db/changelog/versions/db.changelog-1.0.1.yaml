@@ -2,8 +2,12 @@ databaseChangeLog:
   - changeSet:
       id: 2
       author: kosukeroku
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: client
       changes:
-
         - createTable:
             tableName: client
             columns:
@@ -36,6 +40,15 @@ databaseChangeLog:
                   name: mdm_code
                   type: BIGINT
 
+  - changeSet:
+      id: 3
+      author: kosukeroku
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: account_status
+      changes:
         - createTable:
             tableName: account_status
             columns:
@@ -56,6 +69,15 @@ databaseChangeLog:
                   name: description
                   type: VARCHAR
 
+  - changeSet:
+      id: 4
+      author: kosukeroku
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: account
+      changes:
         - createTable:
             tableName: account
             columns:
@@ -97,6 +119,15 @@ databaseChangeLog:
             referencedTableName: client
             referencedColumnNames: id
 
+  - changeSet:
+      id: 5
+      author: kosukeroku
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM account_status
+      changes:
         - sql:
             sql: |
               INSERT INTO account_status (name, description) VALUES
@@ -104,4 +135,4 @@ databaseChangeLog:
               ('IN_CREATION', 'Запрос на создание счета был отправлен в смежную систему'),
               ('CREATED', 'Счёт создан в смежной системе'),
               ('CANCELLED', 'Счёт аннулирован'),
-              ('CLOSED', 'Счёт закрыт');
+              ('CLOSED', 'Счёт закрыт')

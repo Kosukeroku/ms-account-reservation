@@ -15,6 +15,7 @@ public class Account {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", nullable = false)
     private UUID id;
 
     @ManyToOne
@@ -25,6 +26,9 @@ public class Account {
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
+    @Column(name = "account_type")
     private String accountType;
+
+    @Column(name = "currency_code")
     private String currencyCode;
 }

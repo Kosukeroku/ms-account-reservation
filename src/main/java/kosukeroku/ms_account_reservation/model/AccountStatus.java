@@ -1,8 +1,8 @@
 package kosukeroku.ms_account_reservation.model;
 
 import jakarta.persistence.*;
+import kosukeroku.ms_account_reservation.model.enums.AccountStatusName;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -13,31 +13,18 @@ public class AccountStatus {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
     private Integer id;
 
     @Enumerated(EnumType.STRING)
-    private StatusName name;
+    @Column(name = "name", nullable = false)
+    private AccountStatusName name;
 
+    @Column(name = "description")
     private String description;
 
-    public AccountStatus(StatusName name) {
+    public AccountStatus(AccountStatusName name) {
         this.name = name;
         this.description = name.getDescription();
-    }
-
-    @Getter
-    public enum StatusName {
-        NEW("Счёт создан в БД"),
-        IN_CREATION("Запрос на создание счета был отправлен в смежную систему"),
-        CREATED("Счёт создан в смежной системе"),
-        CANCELLED("Счёт аннулирован"),
-        CLOSED("Счёт закрыт");
-
-        private final String description;
-
-        StatusName(String description) {
-            this.description = description;
-        }
-
     }
 }
