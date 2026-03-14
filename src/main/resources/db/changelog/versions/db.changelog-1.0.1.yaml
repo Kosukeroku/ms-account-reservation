@@ -1,0 +1,138 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2
+      author: kosukeroku
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: client
+      changes:
+        - createTable:
+            tableName: client
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: VARCHAR
+              - column:
+                  name: citizenship
+                  type: VARCHAR
+              - column:
+                  name: client_type
+                  type: VARCHAR
+              - column:
+                  name: document_number
+                  type: VARCHAR
+              - column:
+                  name: document_series
+                  type: VARCHAR
+              - column:
+                  name: document_type
+                  type: VARCHAR
+              - column:
+                  name: mdm_code
+                  type: BIGINT
+
+  - changeSet:
+      id: 3
+      author: kosukeroku
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: account_status
+      changes:
+        - createTable:
+            tableName: account_status
+            columns:
+              - column:
+                  name: id
+                  type: INT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR
+
+  - changeSet:
+      id: 4
+      author: kosukeroku
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: account
+      changes:
+        - createTable:
+            tableName: account
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: status_id
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: client_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: account_type
+                  type: VARCHAR
+              - column:
+                  name: currency_code
+                  type: VARCHAR
+
+        - addForeignKeyConstraint:
+            constraintName: fk_account_status
+            baseTableName: account
+            baseColumnNames: status_id
+            referencedTableName: account_status
+            referencedColumnNames: id
+
+        - addForeignKeyConstraint:
+            constraintName: fk_account_client
+            baseTableName: account
+            baseColumnNames: client_id
+            referencedTableName: client
+            referencedColumnNames: id
+
+  - changeSet:
+      id: 5
+      author: kosukeroku
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM account_status
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO account_status (name, description) VALUES
+              ('NEW', 'Счёт создан в БД'),
+              ('IN_CREATION', 'Запрос на создание счета был отправлен в смежную систему'),
+              ('CREATED', 'Счёт создан в смежной системе'),
+              ('CANCELLED', 'Счёт аннулирован'),
+              ('CLOSED', 'Счёт закрыт')
