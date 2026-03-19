@@ -18,3 +18,14 @@ spring:
 
 server:
   port: ${PORT:8080}
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8083}
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_INCLUDE:health,info,threaddump}
+  endpoint:
+    shutdown:
+      access: ${SHUTDOWN_ACCESS:none}
