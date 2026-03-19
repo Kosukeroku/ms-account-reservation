@@ -21,11 +21,11 @@ server:
 
 management:
   server:
-    port: 8083
+    port: ${MANAGEMENT_PORT:8083}
   endpoints:
     web:
       exposure:
-        include: health,info,threaddump
+        include: ${MANAGEMENT_ENDPOINTS_INCLUDE:health,info,threaddump}
   endpoint:
     shutdown:
-      access: none
+      access: ${SHUTDOWN_ACCESS:none}
