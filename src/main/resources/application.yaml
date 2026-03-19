@@ -18,3 +18,14 @@ spring:
 
 server:
   port: ${PORT:8080}
+
+management:
+  server:
+    port: 8083
+  endpoints:
+    web:
+      exposure:
+        include: health,info,threaddump
+  endpoint:
+    shutdown:
+      access: none
