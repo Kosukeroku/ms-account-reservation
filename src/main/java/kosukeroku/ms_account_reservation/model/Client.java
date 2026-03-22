@@ -1,9 +1,11 @@
 package kosukeroku.ms_account_reservation.model;
 
 import jakarta.persistence.*;
+import kosukeroku.ms_account_reservation.dto.ClientStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 import java.util.UUID;
 
@@ -19,8 +21,17 @@ public class Client {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @Column(name = "full_name")
-    private String fullName;
+    @Column(name = "mdm_id", nullable = false)
+    private Long mdmId;
+
+    @Column(name = "first_name")
+    private String firstName;
+
+    @Column(name = "last_name")
+    private String lastName;
+
+    @Column(name = "middle_name")
+    private String middleName;
 
     @Column(name = "citizenship")
     private String citizenship;
@@ -37,6 +48,13 @@ public class Client {
     @Column(name = "document_type")
     private String documentType;
 
-    @Column(name = "mdm_code")
-    private Long mdmCode;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private ClientStatus status;
 }
