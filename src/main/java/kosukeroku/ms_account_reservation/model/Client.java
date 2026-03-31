@@ -57,4 +57,18 @@ public class Client {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ClientStatus status;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (status == null) {
+            status = ClientStatus.ACTIVE;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

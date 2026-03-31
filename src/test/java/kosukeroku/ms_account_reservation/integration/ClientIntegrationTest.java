@@ -1,22 +1,12 @@
 package kosukeroku.ms_account_reservation.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kosukeroku.ms_account_reservation.config.PaginationConstants;
 import kosukeroku.ms_account_reservation.dto.ClientCreateRequest;
 import kosukeroku.ms_account_reservation.dto.ClientUpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.UUID;
 
@@ -24,32 +14,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Testcontainers
-@SpringBootTest
-@AutoConfigureMockMvc
-@Transactional
-class ClientIntegrationTest {
-
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15")
-            .withDatabaseName("testdb")
-            .withUsername("test")
-            .withPassword("test");
-
-    @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        registry.add("spring.liquibase.enabled", () -> "false");
-    }
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+class ClientIntegrationTest extends AbstractIntegrationTest {
 
     private ClientCreateRequest createRequest;
     private ClientUpdateRequest updateRequest;
@@ -217,7 +182,6 @@ class ClientIntegrationTest {
     void updateClient_shouldReturn400_whenLastNameIsInvalid() throws Exception {
         // given
         createClient_shouldReturn201AndClient_whenValidRequest();
-
         updateRequest.setLastName("a".repeat(101));
         String requestBody = objectMapper.writeValueAsString(updateRequest);
 
@@ -335,8 +299,8 @@ class ClientIntegrationTest {
         // then
         mockMvc.perform(get("/api/v1/clients"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.pageable.pageNumber").value(PaginationConstants.DEFAULT_PAGE))
-                .andExpect(jsonPath("$.pageable.pageSize").value(PaginationConstants.DEFAULT_SIZE));
+                .andExpect(jsonPath("$.pageable.pageNumber").value(DEFAULT_PAGE))
+                .andExpect(jsonPath("$.pageable.pageSize").value(DEFAULT_SIZE));
     }
 
     // GET /clients/{clientId}/exists

@@ -1,7 +1,7 @@
 package kosukeroku.ms_account_reservation.exception;
 
-import kosukeroku.ms_account_reservation.dto.ErrorCode;
 import kosukeroku.ms_account_reservation.dto.ErrorResponse;
+import kosukeroku.ms_account_reservation.model.enums.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,29 +15,17 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @Slf4j
 public class GlobalExceptionHandler {
 
-
-    @ExceptionHandler(ClientAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleClientAlreadyExists(ClientAlreadyExistsException ex) {
-        log.warn("Client already exists: {}", ex.getMessage());
-
-        ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setErrorCode(ErrorCode.CLIENT_ALREADY_EXISTS);
-        errorResponse.setErrorDescription(ex.getMessage());
-        errorResponse.setStatusCode(HttpStatus.CONFLICT.value());
-
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-    }
-
-    @ExceptionHandler(ClientNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleClientNotFound(ClientNotFoundException ex) {
-        log.warn("Client not found: {}", ex.getMessage());
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
+        ErrorCode errorCode = ex.getErrorCode();
+        log.warn("{}: {}", errorCode.name(), ex.getMessage());
 
         ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setErrorCode(ErrorCode.CLIENT_NOT_FOUND);
+        errorResponse.setErrorCode(errorCode.name());
         errorResponse.setErrorDescription(ex.getMessage());
-        errorResponse.setStatusCode(HttpStatus.NOT_FOUND.value());
+        errorResponse.setStatusCode(errorCode.getStatusCode());
 
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        return ResponseEntity.status(errorCode.getStatusCode()).body(errorResponse);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -45,7 +33,7 @@ public class GlobalExceptionHandler {
         log.warn("Validation error: {}", ex.getMessage());
 
         ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setErrorCode(ErrorCode.VALIDATION_ERROR);
+        errorResponse.setErrorCode(ErrorCode.VALIDATION_ERROR.name());
         errorResponse.setErrorDescription(
                 ex.getBindingResult().getAllErrors().get(0).getDefaultMessage()
         );
@@ -59,7 +47,7 @@ public class GlobalExceptionHandler {
         log.warn("Resource not found: {}", ex.getMessage());
 
         ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setErrorCode(ErrorCode.NOT_FOUND);
+        errorResponse.setErrorCode(ErrorCode.NOT_FOUND.name());
         errorResponse.setErrorDescription("Resource not found.");
         errorResponse.setStatusCode(HttpStatus.NOT_FOUND.value());
 
@@ -71,11 +59,10 @@ public class GlobalExceptionHandler {
         log.warn("Method not allowed: {}", ex.getMessage());
 
         ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setErrorCode(ErrorCode.METHOD_NOT_ALLOWED);
+        errorResponse.setErrorCode(ErrorCode.METHOD_NOT_ALLOWED.name());
         errorResponse.setErrorDescription(ex.getMessage());
         errorResponse.setStatusCode(HttpStatus.METHOD_NOT_ALLOWED.value());
 
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(errorResponse);
     }
 }
-

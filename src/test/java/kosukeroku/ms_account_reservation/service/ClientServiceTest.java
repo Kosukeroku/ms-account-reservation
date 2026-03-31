@@ -1,11 +1,10 @@
 package kosukeroku.ms_account_reservation.service;
 
-import kosukeroku.ms_account_reservation.config.PaginationConstants;
 import kosukeroku.ms_account_reservation.dto.*;
-import kosukeroku.ms_account_reservation.exception.ClientAlreadyExistsException;
-import kosukeroku.ms_account_reservation.exception.ClientNotFoundException;
+import kosukeroku.ms_account_reservation.exception.ApiException;
 import kosukeroku.ms_account_reservation.mapper.ClientMapper;
 import kosukeroku.ms_account_reservation.model.Client;
+import kosukeroku.ms_account_reservation.model.enums.ErrorCode;
 import kosukeroku.ms_account_reservation.repository.ClientRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,6 +44,9 @@ class ClientServiceTest {
     private Client client;
     private ClientResponse clientResponse;
     private ClientDetailsResponse detailsResponse;
+
+    public static final int DEFAULT_PAGE = 0;
+    public static final int DEFAULT_SIZE = 20;
 
     @BeforeEach
     void setUp() {
@@ -130,14 +131,18 @@ class ClientServiceTest {
     }
 
     @Test
-    void createClient_shouldThrowClientAlreadyExistsException_whenMdmIdAlreadyExists() {
+    void createClient_shouldThrowApiException_whenMdmIdAlreadyExists() {
         // given
         when(clientRepository.existsByMdmId(1234567890L)).thenReturn(true);
 
         // then
         assertThatThrownBy(() -> clientService.createClient(createRequest))
-                .isInstanceOf(ClientAlreadyExistsException.class)
-                .hasMessageContaining("Client with mdmId 1234567890 already exists");
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> {
+                    ApiException apiEx = (ApiException) ex;
+                    assertThat(apiEx.getErrorCode()).isEqualTo(ErrorCode.CLIENT_ALREADY_EXISTS);
+                    assertThat(apiEx.getMessage()).contains("Client with mdmId 1234567890 already exists");
+                });
 
         verify(clientRepository).existsByMdmId(1234567890L);
         verify(clientMapper, never()).toEntity(any());
@@ -168,14 +173,18 @@ class ClientServiceTest {
     }
 
     @Test
-    void getClientById_shouldThrowClientNotFoundException_whenClientDoesNotExist() {
+    void getClientById_shouldThrowApiException_whenClientDoesNotExist() {
         // given
         when(clientRepository.findById(testId)).thenReturn(Optional.empty());
 
         // then
         assertThatThrownBy(() -> clientService.getClientById(testId))
-                .isInstanceOf(ClientNotFoundException.class)
-                .hasMessageContaining("Client not found with id: " + testId);
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> {
+                    ApiException apiEx = (ApiException) ex;
+                    assertThat(apiEx.getErrorCode()).isEqualTo(ErrorCode.CLIENT_NOT_FOUND);
+                    assertThat(apiEx.getMessage()).contains("Client not found with id: " + testId);
+                });
 
         verify(clientRepository).findById(testId);
         verify(clientMapper, never()).toDetailsResponse(any());
@@ -188,8 +197,8 @@ class ClientServiceTest {
         Page<Client> clientPage = mock(Page.class);
         when(clientRepository.findAll(any(Pageable.class))).thenReturn(clientPage);
         when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(PaginationConstants.DEFAULT_PAGE);
-        when(clientPage.getSize()).thenReturn(PaginationConstants.DEFAULT_SIZE);
+        when(clientPage.getNumber()).thenReturn(DEFAULT_PAGE);
+        when(clientPage.getSize()).thenReturn(DEFAULT_SIZE);
         when(clientPage.getTotalPages()).thenReturn(1);
         when(clientPage.getTotalElements()).thenReturn(1L);
         when(clientMapper.toResponse(any())).thenReturn(clientResponse);
@@ -207,8 +216,8 @@ class ClientServiceTest {
         assertThat(firstClient.getFirstName()).isEqualTo("Иван");
         assertThat(firstClient.getLastName()).isEqualTo("Петров");
 
-        assertThat(result.getPageable().getPageNumber()).isEqualTo(PaginationConstants.DEFAULT_PAGE);
-        assertThat(result.getPageable().getPageSize()).isEqualTo(PaginationConstants.DEFAULT_SIZE);
+        assertThat(result.getPageable().getPageNumber()).isEqualTo(DEFAULT_PAGE);
+        assertThat(result.getPageable().getPageSize()).isEqualTo(DEFAULT_SIZE);
         verify(clientRepository).findAll(any(Pageable.class));
     }
 
@@ -219,8 +228,8 @@ class ClientServiceTest {
         when(clientRepository.findByLastNameContainingIgnoreCase(eq("Петров"), any(Pageable.class)))
                 .thenReturn(clientPage);
         when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(PaginationConstants.DEFAULT_PAGE);
-        when(clientPage.getSize()).thenReturn(PaginationConstants.DEFAULT_SIZE);
+        when(clientPage.getNumber()).thenReturn(DEFAULT_PAGE);
+        when(clientPage.getSize()).thenReturn(DEFAULT_SIZE);
         when(clientPage.getTotalPages()).thenReturn(1);
         when(clientPage.getTotalElements()).thenReturn(1L);
         when(clientMapper.toResponse(any())).thenReturn(clientResponse);
@@ -248,8 +257,8 @@ class ClientServiceTest {
         when(clientRepository.findByMdmId(eq(1234567890L), any(Pageable.class)))
                 .thenReturn(clientPage);
         when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(PaginationConstants.DEFAULT_PAGE);
-        when(clientPage.getSize()).thenReturn(PaginationConstants.DEFAULT_SIZE);
+        when(clientPage.getNumber()).thenReturn(DEFAULT_PAGE);
+        when(clientPage.getSize()).thenReturn(DEFAULT_SIZE);
         when(clientPage.getTotalPages()).thenReturn(1);
         when(clientPage.getTotalElements()).thenReturn(1L);
         when(clientMapper.toResponse(any())).thenReturn(clientResponse);
@@ -277,8 +286,8 @@ class ClientServiceTest {
         when(clientRepository.findByLastNameContainingIgnoreCaseAndMdmId(eq("Петров"), eq(1234567890L), any(Pageable.class)))
                 .thenReturn(clientPage);
         when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(PaginationConstants.DEFAULT_PAGE);
-        when(clientPage.getSize()).thenReturn(PaginationConstants.DEFAULT_SIZE);
+        when(clientPage.getNumber()).thenReturn(DEFAULT_PAGE);
+        when(clientPage.getSize()).thenReturn(DEFAULT_SIZE);
         when(clientPage.getTotalPages()).thenReturn(1);
         when(clientPage.getTotalElements()).thenReturn(1L);
         when(clientMapper.toResponse(any())).thenReturn(clientResponse);
@@ -392,14 +401,18 @@ class ClientServiceTest {
     }
 
     @Test
-    void updateClient_shouldThrowClientNotFoundException_whenClientDoesNotExist() {
+    void updateClient_shouldThrowApiException_whenClientDoesNotExist() {
         // given
         when(clientRepository.findById(testId)).thenReturn(Optional.empty());
 
         // then
         assertThatThrownBy(() -> clientService.updateClient(testId, updateRequest))
-                .isInstanceOf(ClientNotFoundException.class)
-                .hasMessageContaining("Client not found with id: " + testId);
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> {
+                    ApiException apiEx = (ApiException) ex;
+                    assertThat(apiEx.getErrorCode()).isEqualTo(ErrorCode.CLIENT_NOT_FOUND);
+                    assertThat(apiEx.getMessage()).contains("Client not found with id: " + testId);
+                });
 
         verify(clientRepository).findById(testId);
         verify(clientMapper, never()).updateEntity(any(), any());
@@ -422,14 +435,18 @@ class ClientServiceTest {
     }
 
     @Test
-    void deleteClient_shouldThrowClientNotFoundException_whenClientDoesNotExist() {
+    void deleteClient_shouldThrowApiException_whenClientDoesNotExist() {
         // given
         when(clientRepository.findById(testId)).thenReturn(Optional.empty());
 
         // then
         assertThatThrownBy(() -> clientService.deleteClient(testId))
-                .isInstanceOf(ClientNotFoundException.class)
-                .hasMessageContaining("Client not found with id: " + testId);
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> {
+                    ApiException apiEx = (ApiException) ex;
+                    assertThat(apiEx.getErrorCode()).isEqualTo(ErrorCode.CLIENT_NOT_FOUND);
+                    assertThat(apiEx.getMessage()).contains("Client not found with id: " + testId);
+                });
 
         verify(clientRepository, never()).save(any());
     }

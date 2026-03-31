@@ -21,19 +21,6 @@ components:
         - BLOCKED
         - DELETED
 
-    ErrorCode:
-      type: string
-      enum:
-        - CLIENT_NOT_FOUND
-        - CLIENT_ALREADY_EXISTS
-        - CLIENT_HAS_ACCOUNTS
-        - VALIDATION_ERROR
-        - UNAUTHORIZED
-        - FORBIDDEN
-        - NOT_FOUND
-        - METHOD_NOT_ALLOWED
-        - INTERNAL_ERROR
-
     ClientCreateRequest:
       type: object
       required:
@@ -159,7 +146,7 @@ components:
         - statusCode
       properties:
         errorCode:
-          $ref: '#/components/schemas/ErrorCode'
+          type: string
         errorDescription:
           type: string
         statusCode:

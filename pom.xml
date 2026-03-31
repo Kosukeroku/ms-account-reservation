@@ -125,7 +125,6 @@
 							<modelPackage>kosukeroku.ms_account_reservation.dto</modelPackage>
 							<configOptions>
 								<useSpringBoot3>true</useSpringBoot3>
-								<useJakartaEe>true</useJakartaEe>
 								<interfaceOnly>true</interfaceOnly>
 								<sourceFolder>src/main/java</sourceFolder>
 							</configOptions>

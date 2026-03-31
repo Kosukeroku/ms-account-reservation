@@ -22,38 +22,32 @@ public class ClientController implements ClientsApi {
 
     @Override
     public ResponseEntity<ClientResponse> createClient(ClientCreateRequest request) {
-        log.info("POST /clients");
         return new ResponseEntity<>(clientService.createClient(request), HttpStatus.CREATED);
     }
 
     @Override
     public ResponseEntity<ClientDetailsResponse> getClientById(UUID clientId) {
-        log.info("GET /clients/{}", clientId);
         return ResponseEntity.ok(clientService.getClientById(clientId));
     }
 
     @Override
     public ResponseEntity<ClientResponse> updateClient(UUID clientId, ClientUpdateRequest request) {
-        log.info("PUT /clients/{}", clientId);
         return ResponseEntity.ok(clientService.updateClient(clientId, request));
     }
 
     @Override
     public ResponseEntity<Void> deleteClient(UUID clientId) {
-        log.info("DELETE /clients/{}", clientId);
         clientService.deleteClient(clientId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
     public ResponseEntity<ClientPageResponse> searchClients(Integer page, Integer size, String lastName, Long mdmId) {
-        log.info("GET /clients?page={}&size={}&lastName={}&mdmId={}", page, size, lastName, mdmId);
         return ResponseEntity.ok(clientService.searchClients(lastName, mdmId, page, size));
     }
 
     @Override
     public ResponseEntity<ClientExistsResponse> checkClientExists(UUID clientId) {
-        log.info("GET /clients/{}/exists", clientId);
         return ResponseEntity.ok(clientService.checkClientExists(clientId));
     }
 }
