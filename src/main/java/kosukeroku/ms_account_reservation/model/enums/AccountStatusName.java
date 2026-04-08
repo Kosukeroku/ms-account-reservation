@@ -1,8 +1,5 @@
 package kosukeroku.ms_account_reservation.model.enums;
 
-import lombok.Getter;
-
-@Getter
 public enum AccountStatusName {
     NEW("Счёт создан в БД"),
     IN_CREATION("Запрос на создание счета был отправлен в смежную систему"),
@@ -14,5 +11,9 @@ public enum AccountStatusName {
 
     AccountStatusName(String description) {
         this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
     }
 }
