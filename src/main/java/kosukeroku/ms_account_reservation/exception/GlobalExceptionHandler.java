@@ -65,4 +65,28 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(errorResponse);
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Invalid argument: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setErrorCode(ErrorCode.VALIDATION_ERROR.name());
+        errorResponse.setErrorDescription(ex.getMessage());
+        errorResponse.setStatusCode(HttpStatus.BAD_REQUEST.value());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ErrorResponse> handleExternalService(ExternalServiceException ex) {
+        log.error("External service error: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setErrorCode(ErrorCode.SERVICE_UNAVAILABLE.name());
+        errorResponse.setErrorDescription(ex.getMessage());
+        errorResponse.setStatusCode(HttpStatus.SERVICE_UNAVAILABLE.value());
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
+    }
 }
