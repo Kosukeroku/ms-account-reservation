@@ -14,8 +14,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(TestCurrencyController.class)
-class TestCurrencyControllerTest {
+@WebMvcTest(CurrencyController.class)
+class CurrencyControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -29,9 +29,11 @@ class TestCurrencyControllerTest {
         when(exchangeRateService.getExchangeRate("USD", "EUR")).thenReturn(new BigDecimal("0.86"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=USD&to=EUR"))
+        mockMvc.perform(get("/api/v1/rate?from=USD&to=EUR"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("0.86"));
+                .andExpect(jsonPath("$.from").value("USD"))
+                .andExpect(jsonPath("$.to").value("EUR"))
+                .andExpect(jsonPath("$.rate").value(0.86));
     }
 
     @Test
@@ -41,7 +43,7 @@ class TestCurrencyControllerTest {
                 .thenThrow(new IllegalArgumentException("Currency code not found: XXX"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=XXX&to=EUR"))
+        mockMvc.perform(get("/api/v1/rate?from=XXX&to=EUR"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorDescription").value("Currency code not found: XXX"));
     }
@@ -53,7 +55,7 @@ class TestCurrencyControllerTest {
                 .thenThrow(new IllegalArgumentException("Currency code not found: XXX"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=USD&to=XXX"))
+        mockMvc.perform(get("/api/v1/rate?from=USD&to=XXX"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorDescription").value("Currency code not found: XXX"));
     }
@@ -65,7 +67,7 @@ class TestCurrencyControllerTest {
                 .thenThrow(new IllegalArgumentException("Currency code is required"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=&to=EUR"))
+        mockMvc.perform(get("/api/v1/rate?from=&to=EUR"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorDescription").value("Currency code is required"));
     }
@@ -77,7 +79,7 @@ class TestCurrencyControllerTest {
                 .thenThrow(new IllegalArgumentException("Currency code is required"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=USD&to="))
+        mockMvc.perform(get("/api/v1/rate?from=USD&to="))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorDescription").value("Currency code is required"));
     }
@@ -89,7 +91,7 @@ class TestCurrencyControllerTest {
                 .thenThrow(new IllegalArgumentException("Currency code is required"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=&to="))
+        mockMvc.perform(get("/api/v1/rate?from=&to="))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorDescription").value("Currency code is required"));
     }
@@ -101,7 +103,7 @@ class TestCurrencyControllerTest {
                 .thenThrow(new IllegalArgumentException("Invalid currency code: US. Must be 3 letters"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=US&to=EUR"))
+        mockMvc.perform(get("/api/v1/rate?from=US&to=EUR"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorDescription").value("Invalid currency code: US. Must be 3 letters"));
     }
@@ -113,7 +115,7 @@ class TestCurrencyControllerTest {
                 .thenThrow(new IllegalArgumentException("Invalid currency code: EU. Must be 3 letters"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=USD&to=EU"))
+        mockMvc.perform(get("/api/v1/rate?from=USD&to=EU"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorDescription").value("Invalid currency code: EU. Must be 3 letters"));
     }
@@ -125,7 +127,7 @@ class TestCurrencyControllerTest {
                 .thenThrow(new ExternalServiceException("External currency service unavailable"));
 
         // then
-        mockMvc.perform(get("/test/rate?from=USD&to=EUR"))
+        mockMvc.perform(get("/api/v1/rate?from=USD&to=EUR"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.errorDescription").value("External currency service unavailable"));
     }

@@ -36,3 +36,9 @@ app:
     base-url: ${CURRENCY_CLIENT_BASE_URL:https://v6.exchangerate-api.com/v6}
     connect-timeout: ${CURRENCY_CLIENT_CONNECT_TIMEOUT}
     read-timeout: ${CURRENCY_CLIENT_READ_TIMEOUT}
+    retry-attempts: ${CURRENCY_CLIENT_RETRY_ATTEMPTS}
+    retry-delay: ${CURRENCY_CLIENT_RETRY_DELAY}
+    retry-multiplier: ${CURRENCY_CLIENT_RETRY_MULTIPLIER}
+
+currency-client-starter:
+  enabled: ${CURRENCY_CLIENT_ENABLED:true}

@@ -6,13 +6,13 @@ import kosukeroku.currencyclient.exception.CurrencyNotFoundException;
 import kosukeroku.currencyclient.properties.CurrencyClientProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.math.BigDecimal;
 
-@Service
 @RequiredArgsConstructor
 @Slf4j
 public class CurrencyService {
@@ -20,6 +20,14 @@ public class CurrencyService {
     private final CurrencyClientProperties properties;
     private final WebClient webClient;
 
+    @Retryable(
+            retryFor = {CurrencyClientException.class},
+            maxAttemptsExpression = "${app.currency-client.retry-attempts}",
+            backoff = @Backoff(
+                    delayExpression = "${app.currency-client.retry-delay}",
+                    multiplierExpression = "${app.currency-client.retry-multiplier}"
+            )
+    )
     public BigDecimal getExchangeRate(String fromCurrency, String toCurrency) {
         validateCurrencyCode(fromCurrency);
         validateCurrencyCode(toCurrency);

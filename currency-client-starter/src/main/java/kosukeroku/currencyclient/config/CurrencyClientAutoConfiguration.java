@@ -4,10 +4,12 @@ import io.netty.channel.ChannelOption;
 import kosukeroku.currencyclient.properties.CurrencyClientProperties;
 import kosukeroku.currencyclient.service.CurrencyService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
@@ -16,6 +18,8 @@ import java.time.Duration;
 @Configuration
 @RequiredArgsConstructor
 @EnableConfigurationProperties(CurrencyClientProperties.class)
+@ConditionalOnProperty(name = "currency-client-starter.enabled", havingValue = "true", matchIfMissing = true)
+@EnableRetry
 public class CurrencyClientAutoConfiguration {
 
     private final CurrencyClientProperties properties;
@@ -33,6 +37,7 @@ public class CurrencyClientAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(name = "currency-client-starter.enabled", havingValue = "true", matchIfMissing = true)
     public CurrencyService currencyService(WebClient currencyWebClient) {
         return new CurrencyService(properties, currencyWebClient);
     }

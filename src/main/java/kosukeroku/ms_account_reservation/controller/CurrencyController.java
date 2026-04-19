@@ -8,16 +8,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/test")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class TestCurrencyController {
+public class CurrencyController {
 
     private final ExchangeRateService exchangeRateService;
 
     @GetMapping("/rate")
-    public BigDecimal getRate(@RequestParam String from, @RequestParam String to) {
-        return exchangeRateService.getExchangeRate(from, to);
+    public Map<String, Object> getRate(@RequestParam String from, @RequestParam String to) {
+        BigDecimal rate = exchangeRateService.getExchangeRate(from, to);
+        return Map.of(
+                "to", to.toUpperCase(),
+                "from", from.toUpperCase(),
+                "rate", rate
+        );
     }
 }

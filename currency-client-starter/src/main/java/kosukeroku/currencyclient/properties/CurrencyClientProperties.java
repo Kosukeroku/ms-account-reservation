@@ -10,4 +10,7 @@ public class CurrencyClientProperties {
     private String apiKey;
     private int connectTimeout = 5000;
     private int readTimeout = 5000;
+    private int retryAttempts = 3;
+    private long retryDelay = 1000;
+    private double retryMultiplier = 2.0;
 }

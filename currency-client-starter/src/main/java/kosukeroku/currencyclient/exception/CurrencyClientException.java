@@ -6,4 +6,7 @@ public class CurrencyClientException extends RuntimeException {
         super(message);
     }
 
+    public CurrencyClientException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
