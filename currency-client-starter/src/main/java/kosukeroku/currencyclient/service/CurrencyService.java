@@ -1,11 +1,14 @@
 package kosukeroku.currencyclient.service;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import kosukeroku.currencyclient.dto.ExchangeResponse;
 import kosukeroku.currencyclient.exception.CurrencyClientException;
 import kosukeroku.currencyclient.exception.CurrencyNotFoundException;
 import kosukeroku.currencyclient.properties.CurrencyClientProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -19,7 +22,9 @@ public class CurrencyService {
 
     private final CurrencyClientProperties properties;
     private final WebClient webClient;
+    private final MeterRegistry meterRegistry;
 
+    @Cacheable(value = "exchangeRates", key = "#p0 + ':' + #p1")
     @Retryable(
             retryFor = {CurrencyClientException.class},
             maxAttemptsExpression = "${app.currency-client.retry-attempts}",
@@ -29,8 +34,15 @@ public class CurrencyService {
             )
     )
     public BigDecimal getExchangeRate(String fromCurrency, String toCurrency) {
+
         validateCurrencyCode(fromCurrency);
         validateCurrencyCode(toCurrency);
+
+        meterRegistry.counter("currency.exchange.rate.requests",
+                "from", fromCurrency.toUpperCase(),
+                "to", toCurrency.toUpperCase()
+        ).increment();
+
 
         log.info("Getting exchange rate from {} to {}", fromCurrency, toCurrency);
 

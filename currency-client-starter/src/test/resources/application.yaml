@@ -1,0 +1,5 @@
+app:
+  currency-client:
+    retry-attempts: 3
+    retry-delay: 1000
+    retry-multiplier: 2
