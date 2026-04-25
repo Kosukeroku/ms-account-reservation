@@ -47,7 +47,7 @@ public class CurrencyClientAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(name = "app.currency-client.health-indicator.enabled", havingValue = "true", matchIfMissing = false)
-    public HealthIndicator currencyApiHealthIndicator(CurrencyService currencyService) {
-        return new CurrencyApiHealthIndicator(currencyService);
+    public HealthIndicator currencyApiHealthIndicator(WebClient currencyWebClient, CurrencyClientProperties properties) {
+        return new CurrencyApiHealthIndicator(currencyWebClient, properties);
     }
 }
