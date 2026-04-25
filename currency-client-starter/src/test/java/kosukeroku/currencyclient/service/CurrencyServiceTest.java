@@ -1,5 +1,7 @@
 package kosukeroku.currencyclient.service;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import kosukeroku.currencyclient.dto.ExchangeResponse;
 import kosukeroku.currencyclient.exception.CurrencyClientException;
 import kosukeroku.currencyclient.exception.CurrencyNotFoundException;
@@ -18,8 +20,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CurrencyServiceTest {
@@ -39,14 +40,21 @@ class CurrencyServiceTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
+    @Mock
+    private MeterRegistry meterRegistry;
+
     private CurrencyService currencyService;
 
     @BeforeEach
     void setUp() {
-        currencyService = new CurrencyService(properties, webClient);
+        Counter counter = mock(Counter.class);
+
+        currencyService = new CurrencyService(properties, webClient, meterRegistry);
         lenient().when(properties.getApiKey()).thenReturn("test-api-key");
         lenient().when(properties.getRetryAttempts()).thenReturn(3);
         lenient().when(properties.getRetryDelay()).thenReturn(100L);
+
+        lenient().when(meterRegistry.counter(anyString(), any(String[].class))).thenReturn(counter);
     }
 
     @Test

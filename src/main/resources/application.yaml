@@ -16,6 +16,17 @@ spring:
     change-log: ${LIQUIBASE_CHANGELOG}
     enabled: ${LIQUIBASE_ENABLED}
 
+  cache:
+    type: redis
+    redis:
+      time-to-live: 1800000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: ${REDIS_TIMEOUT:5000}
+
 server:
   port: ${PORT:8080}
 
@@ -25,20 +36,23 @@ management:
   endpoints:
     web:
       exposure:
-        include: ${MANAGEMENT_ENDPOINTS_INCLUDE:health,info,threaddump}
+        include: health,metrics,prometheus
   endpoint:
-    shutdown:
-      access: ${SHUTDOWN_ACCESS:none}
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
 
 app:
   currency-client:
-    api-key: ${CURRENCY_CLIENT_API_KEY:ae237bae17706c37ebb8ba22}
-    base-url: ${CURRENCY_CLIENT_BASE_URL:https://v6.exchangerate-api.com/v6}
+    api-key: ${CURRENCY_CLIENT_API_KEY}
+    base-url: ${CURRENCY_CLIENT_BASE_URL}
     connect-timeout: ${CURRENCY_CLIENT_CONNECT_TIMEOUT}
     read-timeout: ${CURRENCY_CLIENT_READ_TIMEOUT}
-    retry-attempts: ${CURRENCY_CLIENT_RETRY_ATTEMPTS}
-    retry-delay: ${CURRENCY_CLIENT_RETRY_DELAY}
-    retry-multiplier: ${CURRENCY_CLIENT_RETRY_MULTIPLIER}
-
-currency-client-starter:
-  enabled: ${CURRENCY_CLIENT_ENABLED:true}
+    retry-attempts: ${CURRENCY_CLIENT_RETRY_ATTEMPTS:3}
+    retry-delay: ${CURRENCY_CLIENT_RETRY_DELAY:1000}
+    retry-multiplier: ${CURRENCY_CLIENT_RETRY_MULTIPLIER:2}
+    health-indicator:
+      enabled: ${HEALTH_INDICATOR_ENABLED:true}

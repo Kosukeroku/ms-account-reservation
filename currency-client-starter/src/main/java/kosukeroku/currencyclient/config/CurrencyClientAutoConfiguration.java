@@ -1,9 +1,12 @@
 package kosukeroku.currencyclient.config;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
+import kosukeroku.currencyclient.health.CurrencyApiHealthIndicator;
 import kosukeroku.currencyclient.properties.CurrencyClientProperties;
 import kosukeroku.currencyclient.service.CurrencyService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +41,13 @@ public class CurrencyClientAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(name = "currency-client-starter.enabled", havingValue = "true", matchIfMissing = true)
-    public CurrencyService currencyService(WebClient currencyWebClient) {
-        return new CurrencyService(properties, currencyWebClient);
+    public CurrencyService currencyService(WebClient currencyWebClient, MeterRegistry meterRegistry) {
+        return new CurrencyService(properties, currencyWebClient, meterRegistry);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "app.currency-client.health-indicator.enabled", havingValue = "true", matchIfMissing = false)
+    public HealthIndicator currencyApiHealthIndicator(WebClient currencyWebClient, CurrencyClientProperties properties) {
+        return new CurrencyApiHealthIndicator(currencyWebClient, properties);
     }
 }
