@@ -38,11 +38,6 @@ public class CurrencyService {
         validateCurrencyCode(fromCurrency);
         validateCurrencyCode(toCurrency);
 
-        meterRegistry.counter("currency.exchange.rate.requests",
-                "from", fromCurrency.toUpperCase(),
-                "to", toCurrency.toUpperCase()
-        ).increment();
-
 
         log.info("Getting exchange rate from {} to {}", fromCurrency, toCurrency);
 

@@ -2,11 +2,14 @@ package kosukeroku.ms_account_reservation.controller;
 
 import kosukeroku.ms_account_reservation.api.ClientsApi;
 import kosukeroku.ms_account_reservation.dto.*;
+import kosukeroku.ms_account_reservation.service.ClientReportService;
 import kosukeroku.ms_account_reservation.service.ClientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,6 +22,7 @@ import java.util.UUID;
 public class ClientController implements ClientsApi {
 
     private final ClientService clientService;
+    private final ClientReportService clientReportService;
 
     @Override
     public ResponseEntity<ClientResponse> createClient(ClientCreateRequest request) {
@@ -49,5 +53,10 @@ public class ClientController implements ClientsApi {
     @Override
     public ResponseEntity<ClientExistsResponse> checkClientExists(UUID clientId) {
         return ResponseEntity.ok(clientService.checkClientExists(clientId));
+    }
+
+    @GetMapping("/clients/{clientId}/report")
+    public ResponseEntity<ClientReportResponse> getClientReport(@PathVariable UUID clientId) {
+        return ResponseEntity.ok(clientReportService.getClientReport(clientId));
     }
 }
