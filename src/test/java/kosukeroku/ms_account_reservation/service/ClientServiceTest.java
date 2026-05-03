@@ -3,7 +3,10 @@ package kosukeroku.ms_account_reservation.service;
 import kosukeroku.ms_account_reservation.dto.*;
 import kosukeroku.ms_account_reservation.exception.ApiException;
 import kosukeroku.ms_account_reservation.mapper.ClientMapper;
+import kosukeroku.ms_account_reservation.model.Account;
+import kosukeroku.ms_account_reservation.model.AccountStatus;
 import kosukeroku.ms_account_reservation.model.Client;
+import kosukeroku.ms_account_reservation.model.enums.AccountStatusName;
 import kosukeroku.ms_account_reservation.model.enums.ErrorCode;
 import kosukeroku.ms_account_reservation.repository.ClientRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,10 +16,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +50,8 @@ class ClientServiceTest {
     private Client client;
     private ClientResponse clientResponse;
     private ClientDetailsResponse detailsResponse;
+    private ClientSearchResponse searchResponse;
+    private List<Account> accounts;
 
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_SIZE = 20;
@@ -68,6 +76,27 @@ class ClientServiceTest {
         updateRequest.setLastName("Иванов");
         updateRequest.setMiddleName("Александрович");
 
+        AccountStatus newStatus = new AccountStatus(AccountStatusName.NEW);
+        newStatus.setId(1);
+        AccountStatus createdStatus = new AccountStatus(AccountStatusName.CREATED);
+        createdStatus.setId(2);
+
+        Account account1 = new Account();
+        account1.setId(UUID.randomUUID());
+        account1.setStatus(newStatus);
+        account1.setCurrencyCode("USD");
+        account1.setBalance(new BigDecimal("1000.00"));
+        account1.setAccountNumber("ACC001");
+
+        Account account2 = new Account();
+        account2.setId(UUID.randomUUID());
+        account2.setStatus(createdStatus);
+        account2.setCurrencyCode("EUR");
+        account2.setBalance(new BigDecimal("5000.00"));
+        account2.setAccountNumber("ACC002");
+
+        accounts = List.of(account1, account2);
+
         client = new Client();
         client.setId(testId);
         client.setMdmId(1234567890L);
@@ -82,8 +111,7 @@ class ClientServiceTest {
         client.setStatus(ClientStatus.ACTIVE);
         client.setCreatedAt(LocalDateTime.now());
         client.setUpdatedAt(LocalDateTime.now());
-        client.setCreatedAt(LocalDateTime.now());
-        client.setUpdatedAt(LocalDateTime.now());
+        client.setAccounts(accounts);
 
         clientResponse = new ClientResponse();
         clientResponse.setId(testId);
@@ -100,7 +128,15 @@ class ClientServiceTest {
         detailsResponse.setLastName("Петров");
         detailsResponse.setMiddleName("Сергеевич");
         detailsResponse.setStatus(ClientStatus.ACTIVE);
-        detailsResponse.setHasAccounts(false);
+
+        searchResponse = new ClientSearchResponse();
+        searchResponse.setId(testId);
+        searchResponse.setMdmId(1234567890L);
+        searchResponse.setFirstName("Иван");
+        searchResponse.setLastName("Петров");
+        searchResponse.setMiddleName("Сергеевич");
+        searchResponse.setStatus(ClientStatus.ACTIVE);
+        searchResponse.setActiveAccountsCount(accounts.size());
     }
 
     // create client
@@ -149,12 +185,21 @@ class ClientServiceTest {
         verify(clientRepository, never()).save(any());
     }
 
-
     // get client by id
     @Test
     void getClientById_shouldReturnClientDetailsResponse_whenClientExists() {
         // given
         when(clientRepository.findById(testId)).thenReturn(Optional.of(client));
+
+        AccountResponse accountResponse1 = new AccountResponse();
+        accountResponse1.setCurrencyCode("USD");
+        accountResponse1.setBalance(new BigDecimal("1000.00"));
+
+        AccountResponse accountResponse2 = new AccountResponse();
+        accountResponse2.setCurrencyCode("EUR");
+        accountResponse2.setBalance(new BigDecimal("5000.00"));
+
+        detailsResponse.setAccounts(List.of(accountResponse1, accountResponse2));
         when(clientMapper.toDetailsResponse(client)).thenReturn(detailsResponse);
 
         // when
@@ -166,7 +211,10 @@ class ClientServiceTest {
         assertThat(result.getMdmId()).isEqualTo(1234567890L);
         assertThat(result.getFirstName()).isEqualTo("Иван");
         assertThat(result.getLastName()).isEqualTo("Петров");
-        assertThat(result.getHasAccounts()).isFalse();
+
+        assertThat(result.getAccounts()).isNotNull();
+        assertThat(result.getAccounts()).hasSize(2);
+        assertThat(result.getAccounts().get(0).getCurrencyCode()).isEqualTo("USD");
 
         verify(clientRepository).findById(testId);
         verify(clientMapper).toDetailsResponse(client);
@@ -194,14 +242,9 @@ class ClientServiceTest {
     @Test
     void searchClients_shouldReturnPageResponse_whenNoFilters() {
         // given
-        Page<Client> clientPage = mock(Page.class);
+        Page<Client> clientPage = new PageImpl<>(List.of(client), PageRequest.of(0, 20), 1);
         when(clientRepository.findAll(any(Pageable.class))).thenReturn(clientPage);
-        when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(DEFAULT_PAGE);
-        when(clientPage.getSize()).thenReturn(DEFAULT_SIZE);
-        when(clientPage.getTotalPages()).thenReturn(1);
-        when(clientPage.getTotalElements()).thenReturn(1L);
-        when(clientMapper.toResponse(any())).thenReturn(clientResponse);
+        when(clientMapper.toSearchResponse(client)).thenReturn(searchResponse);
 
         // when
         ClientPageResponse result = clientService.searchClients(null, null, null, null);
@@ -209,30 +252,20 @@ class ClientServiceTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-
-        ClientResponse firstClient = result.getContent().getFirst();
-        assertThat(firstClient.getId()).isEqualTo(testId);
-        assertThat(firstClient.getMdmId()).isEqualTo(1234567890L);
-        assertThat(firstClient.getFirstName()).isEqualTo("Иван");
-        assertThat(firstClient.getLastName()).isEqualTo("Петров");
-
         assertThat(result.getPageable().getPageNumber()).isEqualTo(DEFAULT_PAGE);
         assertThat(result.getPageable().getPageSize()).isEqualTo(DEFAULT_SIZE);
+
         verify(clientRepository).findAll(any(Pageable.class));
+        verify(clientMapper).toSearchResponse(client);
     }
 
     @Test
     void searchClients_shouldReturnPageResponse_whenFilterByLastName() {
         // given
-        Page<Client> clientPage = mock(Page.class);
+        Page<Client> clientPage = new PageImpl<>(List.of(client), PageRequest.of(0, 20), 1);
         when(clientRepository.findByLastNameContainingIgnoreCase(eq("Петров"), any(Pageable.class)))
                 .thenReturn(clientPage);
-        when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(DEFAULT_PAGE);
-        when(clientPage.getSize()).thenReturn(DEFAULT_SIZE);
-        when(clientPage.getTotalPages()).thenReturn(1);
-        when(clientPage.getTotalElements()).thenReturn(1L);
-        when(clientMapper.toResponse(any())).thenReturn(clientResponse);
+        when(clientMapper.toSearchResponse(client)).thenReturn(searchResponse);
 
         // when
         ClientPageResponse result = clientService.searchClients("Петров", null, null, null);
@@ -241,27 +274,17 @@ class ClientServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
 
-        ClientResponse firstClient = result.getContent().getFirst();
-        assertThat(firstClient.getId()).isEqualTo(testId);
-        assertThat(firstClient.getMdmId()).isEqualTo(1234567890L);
-        assertThat(firstClient.getFirstName()).isEqualTo("Иван");
-        assertThat(firstClient.getLastName()).isEqualTo("Петров");
-
         verify(clientRepository).findByLastNameContainingIgnoreCase(eq("Петров"), any(Pageable.class));
+        verify(clientMapper).toSearchResponse(client);
     }
 
     @Test
     void searchClients_shouldReturnPageResponse_whenFilterByMdmId() {
         // given
-        Page<Client> clientPage = mock(Page.class);
+        Page<Client> clientPage = new PageImpl<>(List.of(client), PageRequest.of(0, 20), 1);
         when(clientRepository.findByMdmId(eq(1234567890L), any(Pageable.class)))
                 .thenReturn(clientPage);
-        when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(DEFAULT_PAGE);
-        when(clientPage.getSize()).thenReturn(DEFAULT_SIZE);
-        when(clientPage.getTotalPages()).thenReturn(1);
-        when(clientPage.getTotalElements()).thenReturn(1L);
-        when(clientMapper.toResponse(any())).thenReturn(clientResponse);
+        when(clientMapper.toSearchResponse(client)).thenReturn(searchResponse);
 
         // when
         ClientPageResponse result = clientService.searchClients(null, 1234567890L, null, null);
@@ -270,27 +293,17 @@ class ClientServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
 
-        ClientResponse firstClient = result.getContent().getFirst();
-        assertThat(firstClient.getId()).isEqualTo(testId);
-        assertThat(firstClient.getMdmId()).isEqualTo(1234567890L);
-        assertThat(firstClient.getFirstName()).isEqualTo("Иван");
-        assertThat(firstClient.getLastName()).isEqualTo("Петров");
-
         verify(clientRepository).findByMdmId(eq(1234567890L), any(Pageable.class));
+        verify(clientMapper).toSearchResponse(client);
     }
 
     @Test
     void searchClients_shouldReturnPageResponse_whenFilterByLastNameAndMdmId() {
         // given
-        Page<Client> clientPage = mock(Page.class);
+        Page<Client> clientPage = new PageImpl<>(List.of(client), PageRequest.of(0, 20), 1);
         when(clientRepository.findByLastNameContainingIgnoreCaseAndMdmId(eq("Петров"), eq(1234567890L), any(Pageable.class)))
                 .thenReturn(clientPage);
-        when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(DEFAULT_PAGE);
-        when(clientPage.getSize()).thenReturn(DEFAULT_SIZE);
-        when(clientPage.getTotalPages()).thenReturn(1);
-        when(clientPage.getTotalElements()).thenReturn(1L);
-        when(clientMapper.toResponse(any())).thenReturn(clientResponse);
+        when(clientMapper.toSearchResponse(client)).thenReturn(searchResponse);
 
         // when
         ClientPageResponse result = clientService.searchClients("Петров", 1234567890L, null, null);
@@ -299,46 +312,27 @@ class ClientServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
 
-        ClientResponse firstClient = result.getContent().getFirst();
-        assertThat(firstClient.getId()).isEqualTo(testId);
-        assertThat(firstClient.getMdmId()).isEqualTo(1234567890L);
-        assertThat(firstClient.getFirstName()).isEqualTo("Иван");
-        assertThat(firstClient.getLastName()).isEqualTo("Петров");
-
         verify(clientRepository).findByLastNameContainingIgnoreCaseAndMdmId(eq("Петров"), eq(1234567890L), any(Pageable.class));
+        verify(clientMapper).toSearchResponse(client);
     }
 
     @Test
     void searchClients_shouldUseCustomPageAndSize() {
         // given
-        Page<Client> clientPage = mock(Page.class);
-        when(clientRepository.findAll(any(Pageable.class))).thenReturn(clientPage);
-        when(clientPage.getContent()).thenReturn(List.of(client));
-        when(clientPage.getNumber()).thenReturn(2);
-        when(clientPage.getSize()).thenReturn(10);
-        when(clientPage.getTotalPages()).thenReturn(5);
-        when(clientPage.getTotalElements()).thenReturn(50L);
-        when(clientMapper.toResponse(any())).thenReturn(clientResponse);
+        Page<Client> clientPage = new PageImpl<>(List.of(client), PageRequest.of(2, 10), 1);
+        when(clientRepository.findAll(PageRequest.of(2, 10))).thenReturn(clientPage);
+        when(clientMapper.toSearchResponse(client)).thenReturn(searchResponse);
 
         // when
         ClientPageResponse result = clientService.searchClients(null, null, 2, 10);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getContent()).hasSize(1);
-
-        ClientResponse firstClient = result.getContent().getFirst();
-        assertThat(firstClient.getId()).isEqualTo(testId);
-        assertThat(firstClient.getMdmId()).isEqualTo(1234567890L);
-        assertThat(firstClient.getFirstName()).isEqualTo("Иван");
-        assertThat(firstClient.getLastName()).isEqualTo("Петров");
-
         assertThat(result.getPageable().getPageNumber()).isEqualTo(2);
         assertThat(result.getPageable().getPageSize()).isEqualTo(10);
-        assertThat(result.getPageable().getTotalPages()).isEqualTo(5);
-        assertThat(result.getPageable().getTotalElements()).isEqualTo(50);
 
         verify(clientRepository).findAll(PageRequest.of(2, 10));
+        verify(clientMapper).toSearchResponse(client);
     }
 
     @Test
@@ -356,6 +350,50 @@ class ClientServiceTest {
         assertThat(result.getPageable().getTotalElements()).isZero();
     }
 
+    @Test
+    void searchClients_shouldReturnActiveAccountsCount() {
+        // given
+        Page<Client> clientPage = new PageImpl<>(List.of(client), PageRequest.of(0, 20), 1);
+        when(clientRepository.findByLastNameContainingIgnoreCase(eq("Петров"), any(Pageable.class)))
+                .thenReturn(clientPage);
+        when(clientMapper.toSearchResponse(client)).thenReturn(searchResponse);
+
+        // when
+        ClientPageResponse result = clientService.searchClients("Петров", null, null, null);
+
+        // then
+        assertThat(result).isNotNull();
+        ClientSearchResponse response = (ClientSearchResponse) result.getContent().get(0);
+        assertThat(response.getActiveAccountsCount()).isEqualTo(2);
+    }
+
+    @Test
+    void searchClients_shouldReturnZeroActiveAccountsCount_whenClientHasNoAccounts() {
+        // given
+        Client clientWithoutAccounts = new Client();
+        clientWithoutAccounts.setId(testId);
+        clientWithoutAccounts.setFirstName("Иван");
+        clientWithoutAccounts.setLastName("Петров");
+        clientWithoutAccounts.setAccounts(new ArrayList<>());
+
+        ClientSearchResponse emptySearchResponse = new ClientSearchResponse();
+        emptySearchResponse.setId(testId);
+        emptySearchResponse.setActiveAccountsCount(0);
+
+        Page<Client> clientPage = new PageImpl<>(List.of(clientWithoutAccounts), PageRequest.of(0, 20), 1);
+        when(clientRepository.findByLastNameContainingIgnoreCase(eq("Петров"), any(Pageable.class)))
+                .thenReturn(clientPage);
+        when(clientMapper.toSearchResponse(clientWithoutAccounts)).thenReturn(emptySearchResponse);
+
+        // when
+        ClientPageResponse result = clientService.searchClients("Петров", null, null, null);
+
+        // then
+        assertThat(result).isNotNull();
+        ClientSearchResponse response = (ClientSearchResponse) result.getContent().get(0);
+        assertThat(response.getActiveAccountsCount()).isZero();
+    }
+
     // update client
     @Test
     void updateClient_shouldReturnUpdatedClientResponse_whenClientExistsAndOnlyThreeFieldsUpdated() {
@@ -366,11 +404,6 @@ class ClientServiceTest {
         updatedClient.setFirstName("Петр");
         updatedClient.setLastName("Иванов");
         updatedClient.setMiddleName("Александрович");
-        updatedClient.setCitizenship("РФ");
-        updatedClient.setClientType("INDIVIDUAL");
-        updatedClient.setDocumentNumber("123456");
-        updatedClient.setDocumentSeries("1234");
-        updatedClient.setDocumentType("PASSPORT");
         updatedClient.setStatus(ClientStatus.ACTIVE);
         updatedClient.setCreatedAt(LocalDateTime.now());
         updatedClient.setUpdatedAt(LocalDateTime.now());
@@ -421,17 +454,22 @@ class ClientServiceTest {
 
     // soft delete client
     @Test
-    void deleteClient_shouldSoftDeleteClient_whenClientExists() {
+    void deleteClient_shouldSoftDeleteClient_whenClientExistsAndNoAccounts() {
         // given
-        when(clientRepository.findById(testId)).thenReturn(Optional.of(client));
-        when(clientRepository.save(client)).thenReturn(client);
+        Client clientWithoutAccounts = new Client();
+        clientWithoutAccounts.setId(testId);
+        clientWithoutAccounts.setStatus(ClientStatus.ACTIVE);
+        clientWithoutAccounts.setAccounts(new ArrayList<>());
+
+        when(clientRepository.findById(testId)).thenReturn(Optional.of(clientWithoutAccounts));
+        when(clientRepository.save(clientWithoutAccounts)).thenReturn(clientWithoutAccounts);
 
         // when
         clientService.deleteClient(testId);
 
         // then
-        assertThat(client.getStatus()).isEqualTo(ClientStatus.DELETED);
-        verify(clientRepository).save(client);
+        assertThat(clientWithoutAccounts.getStatus()).isEqualTo(ClientStatus.DELETED);
+        verify(clientRepository).save(clientWithoutAccounts);
     }
 
     @Test

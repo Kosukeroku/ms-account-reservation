@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -57,6 +59,9 @@ public class Client {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ClientStatus status;
+
+    @OneToMany(mappedBy = "client")
+    private List<Account> accounts = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

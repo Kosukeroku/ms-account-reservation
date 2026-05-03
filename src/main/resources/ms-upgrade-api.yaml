@@ -21,6 +21,31 @@ components:
         - BLOCKED
         - DELETED
 
+    AccountStatus:
+      type: string
+      enum:
+        - NEW
+        - IN_CREATION
+        - CREATED
+        - CANCELLED
+        - CLOSED
+
+    AccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountNumber:
+          type: string
+        currencyCode:
+          type: string
+        balance:
+          type: number
+          format: decimal
+        status:
+          $ref: '#/components/schemas/AccountStatus'
+
     ClientCreateRequest:
       type: object
       required:
@@ -105,8 +130,30 @@ components:
         - $ref: '#/components/schemas/ClientResponse'
         - type: object
           properties:
-            hasAccounts:
-              type: boolean
+            accounts:
+              type: array
+              items:
+                $ref: '#/components/schemas/AccountResponse'
+
+    ClientSearchResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        mdmId:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        middleName:
+          type: string
+        status:
+          $ref: '#/components/schemas/ClientStatus'
+        activeAccountsCount:
+          type: integer
 
     ClientExistsResponse:
       type: object
@@ -125,7 +172,7 @@ components:
         content:
           type: array
           items:
-            $ref: '#/components/schemas/ClientResponse'
+            $ref: '#/components/schemas/ClientSearchResponse'
         pageable:
           type: object
           properties:

@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -31,4 +33,10 @@ public class Account {
 
     @Column(name = "currency_code")
     private String currencyCode;
+
+    @Column(name = "balance")
+    private BigDecimal balance = BigDecimal.ZERO;
+
+    @Column(name = "account_number", unique = true)
+    private String accountNumber;
 }

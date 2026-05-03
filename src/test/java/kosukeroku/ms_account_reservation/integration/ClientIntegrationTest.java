@@ -3,11 +3,19 @@ package kosukeroku.ms_account_reservation.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kosukeroku.ms_account_reservation.dto.ClientCreateRequest;
 import kosukeroku.ms_account_reservation.dto.ClientUpdateRequest;
+import kosukeroku.ms_account_reservation.model.Account;
+import kosukeroku.ms_account_reservation.model.AccountStatus;
+import kosukeroku.ms_account_reservation.model.enums.AccountStatusName;
+import kosukeroku.ms_account_reservation.repository.AccountRepository;
+import kosukeroku.ms_account_reservation.repository.AccountStatusRepository;
+import kosukeroku.ms_account_reservation.repository.ClientRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -20,8 +28,20 @@ class ClientIntegrationTest extends AbstractIntegrationTest {
     private ClientUpdateRequest updateRequest;
     private UUID createdClientId;
 
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private AccountStatusRepository accountStatusRepository;
+
+    @Autowired
+    private ClientRepository clientRepository;
+
     @BeforeEach
     void setUp() {
+        accountRepository.deleteAll();
+        clientRepository.deleteAll();
+
         createRequest = new ClientCreateRequest();
         createRequest.setMdmId(1234567890L);
         createRequest.setFirstName("Иван");
@@ -352,5 +372,103 @@ class ClientIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.errorCode").value("METHOD_NOT_ALLOWED"))
                 .andExpect(jsonPath("$.statusCode").value(405));
+    }
+
+    // accounts
+    @Test
+    void getClientById_shouldReturnClientWithAccounts() throws Exception {
+        // given
+        createClient_shouldReturn201AndClient_whenValidRequest();
+        createTestAccounts(createdClientId);
+
+        // then
+        mockMvc.perform(get("/api/v1/clients/{clientId}", createdClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(createdClientId.toString()))
+                .andExpect(jsonPath("$.firstName").value("Иван"))
+                .andExpect(jsonPath("$.lastName").value("Петров"))
+                .andExpect(jsonPath("$.accounts").isArray())
+                .andExpect(jsonPath("$.accounts.length()").value(3))
+                .andExpect(jsonPath("$.accounts[0].currencyCode").value("USD"))
+                .andExpect(jsonPath("$.accounts[0].balance").value(1000.00))
+                .andExpect(jsonPath("$.accounts[0].status").value("NEW"))
+                .andExpect(jsonPath("$.accounts[1].currencyCode").value("EUR"))
+                .andExpect(jsonPath("$.accounts[1].balance").value(5000.00))
+                .andExpect(jsonPath("$.accounts[1].status").value("CREATED"))
+                .andExpect(jsonPath("$.accounts[2].currencyCode").value("RUB"))
+                .andExpect(jsonPath("$.accounts[2].balance").value(75000.00))
+                .andExpect(jsonPath("$.accounts[2].status").value("CREATED"));
+    }
+
+    @Test
+    void searchClients_shouldReturnActiveAccountsCount() throws Exception {
+        // given
+        createClient_shouldReturn201AndClient_whenValidRequest();
+        createTestAccounts(createdClientId);
+
+        // then
+        mockMvc.perform(get("/api/v1/clients")
+                        .param("lastName", "Петров")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(createdClientId.toString()))
+                .andExpect(jsonPath("$.content[0].firstName").value("Иван"))
+                .andExpect(jsonPath("$.content[0].lastName").value("Петров"))
+                .andExpect(jsonPath("$.content[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.content[0].activeAccountsCount").value(3));
+    }
+
+    @Test
+    void deleteClient_shouldReturn409_whenClientHasActiveAccounts() throws Exception {
+        // given
+        createClient_shouldReturn201AndClient_whenValidRequest();
+        createTestAccounts(createdClientId);
+
+        // then
+        mockMvc.perform(delete("/api/v1/clients/{clientId}", createdClientId))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("CLIENT_HAS_ACCOUNTS"));
+    }
+
+    @Transactional
+    protected void createTestAccounts(UUID clientId) {
+        AccountStatus newStatus = accountStatusRepository.findByName(AccountStatusName.NEW)
+                .orElseGet(() -> accountStatusRepository.save(new AccountStatus(AccountStatusName.NEW)));
+
+        AccountStatus createdStatus = accountStatusRepository.findByName(AccountStatusName.CREATED)
+                .orElseGet(() -> accountStatusRepository.save(new AccountStatus(AccountStatusName.CREATED)));
+
+        var client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new RuntimeException("Client not found"));
+
+        Account account1 = new Account();
+        account1.setClient(client);
+        account1.setStatus(newStatus);
+        account1.setCurrencyCode("USD");
+        account1.setBalance(new BigDecimal("1000.00"));
+        account1.setAccountNumber("ACC001");
+        account1.setAccountType("CHECKING");
+        accountRepository.save(account1);
+
+        Account account2 = new Account();
+        account2.setClient(client);
+        account2.setStatus(createdStatus);
+        account2.setCurrencyCode("EUR");
+        account2.setBalance(new BigDecimal("5000.00"));
+        account2.setAccountNumber("ACC002");
+        account2.setAccountType("SAVINGS");
+        accountRepository.save(account2);
+
+        Account account3 = new Account();
+        account3.setClient(client);
+        account3.setStatus(createdStatus);
+        account3.setCurrencyCode("RUB");
+        account3.setBalance(new BigDecimal("75000.00"));
+        account3.setAccountNumber("ACC003");
+        account3.setAccountType("CHECKING");
+        accountRepository.save(account3);
+
+        accountRepository.flush();
     }
 }

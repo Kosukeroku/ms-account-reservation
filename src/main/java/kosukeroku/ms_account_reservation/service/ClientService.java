@@ -3,8 +3,10 @@ package kosukeroku.ms_account_reservation.service;
 import kosukeroku.ms_account_reservation.dto.*;
 import kosukeroku.ms_account_reservation.exception.ApiException;
 import kosukeroku.ms_account_reservation.mapper.ClientMapper;
+import kosukeroku.ms_account_reservation.model.Account;
+import kosukeroku.ms_account_reservation.model.AccountStatus;
 import kosukeroku.ms_account_reservation.model.Client;
-import kosukeroku.ms_account_reservation.dto.ClientStatus;
+import kosukeroku.ms_account_reservation.model.enums.AccountStatusName;
 import kosukeroku.ms_account_reservation.model.enums.ErrorCode;
 import kosukeroku.ms_account_reservation.repository.ClientRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 
 import java.util.UUID;
 
@@ -38,7 +39,6 @@ public class ClientService {
                     "Client with mdmId " + request.getMdmId() + " already exists");
         }
         Client client = clientMapper.toEntity(request);
-
         Client savedClient = clientRepository.save(client);
         log.info("Client created with id: {}", savedClient.getId());
 
@@ -48,11 +48,15 @@ public class ClientService {
     @Transactional(readOnly = true)
     public ClientDetailsResponse getClientById(UUID id) {
         log.info("Getting client by id: {}", id);
+
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.CLIENT_NOT_FOUND,
                         "Client not found with id: " + id));
 
-        log.info("Client found: {}", client.getId());
+        log.info("Client found: {}, accounts count: {}",
+                client.getId(),
+                client.getAccounts() != null ? client.getAccounts().size() : 0);
+
         return clientMapper.toDetailsResponse(client);
     }
 
@@ -65,8 +69,6 @@ public class ClientService {
                         "Client not found with id: " + id));
 
         clientMapper.updateEntity(request, client);
-
-
         Client updatedClient = clientRepository.save(client);
         log.info("Client updated with id: {}", updatedClient.getId());
 
@@ -81,10 +83,15 @@ public class ClientService {
                 .orElseThrow(() -> new ApiException(ErrorCode.CLIENT_NOT_FOUND,
                         "Client not found with id: " + id));
 
+        boolean hasActiveAccounts = hasActiveAccounts(client);
+
+        if (hasActiveAccounts) {
+            throw new ApiException(ErrorCode.CLIENT_HAS_ACCOUNTS,
+                    "Client has active accounts and cannot be deleted");
+        }
+
         client.setStatus(ClientStatus.DELETED);
-
         clientRepository.save(client);
-
         log.info("Client deleted with id: {}", id);
     }
 
@@ -128,7 +135,11 @@ public class ClientService {
 
         ClientPageResponse response = new ClientPageResponse();
         response.setContent(clientPage.getContent().stream()
-                .map(clientMapper::toResponse)
+                .map(client -> {
+                    ClientSearchResponse searchResponse = clientMapper.toSearchResponse(client);
+                    searchResponse.setActiveAccountsCount(countActiveAccounts(client));
+                    return searchResponse;
+                })
                 .toList());
 
         ClientPageResponsePageable pageableResponse = new ClientPageResponsePageable();
@@ -139,5 +150,22 @@ public class ClientService {
         response.setPageable(pageableResponse);
 
         return response;
+    }
+
+    private int countActiveAccounts(Client client) {
+        if (client.getAccounts() == null) {
+            return 0;
+        }
+        return (int) client.getAccounts().stream()
+                .map(Account::getStatus)
+                .map(AccountStatus::getName)
+                .filter(status -> status == AccountStatusName.NEW
+                        || status == AccountStatusName.IN_CREATION
+                        || status == AccountStatusName.CREATED)
+                .count();
+    }
+
+    private boolean hasActiveAccounts(Client client) {
+        return countActiveAccounts(client) > 0;
     }
 }
