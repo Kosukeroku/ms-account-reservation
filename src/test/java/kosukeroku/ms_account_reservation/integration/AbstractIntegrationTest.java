@@ -14,7 +14,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 @Testcontainers
 public abstract class AbstractIntegrationTest {
 

@@ -22,4 +22,6 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
     Page<Client> findByMdmId(Long mdmId, Pageable pageable);
 
     Page<Client> findByLastNameContainingIgnoreCaseAndMdmId(String lastName, Long mdmId, Pageable pageable);
+
+    Optional<Client> findById(UUID id);
 }

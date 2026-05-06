@@ -23,6 +23,9 @@ class CurrencyControllerTest {
     @MockitoBean
     private ExchangeRateService exchangeRateService;
 
+    @MockitoBean
+    private io.micrometer.core.instrument.MeterRegistry meterRegistry;
+
     @Test
     void getRate_shouldReturn200_whenValidCurrencies() throws Exception {
         // given
