@@ -62,3 +62,8 @@ app:
     queue-capacity: ${APP_ASYNC_QUEUE_CAPACITY:100}
     thread-name-prefix: ${APP_ASYNC_THREAD_NAME_PREFIX:async-}
     timeout-seconds: ${APP_ASYNC_TIMEOUT_SECONDS:5}
+
+logging:
+  level:
+    org.hibernate.SQL: ${LOGGING_LEVEL_ORG_HIBERNATE_SQL:INFO}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${LOGGING_LEVEL_ORG_HIBERNATE_TYPE_DESCRIPTOR_SQL_BASICBINDER:INFO}

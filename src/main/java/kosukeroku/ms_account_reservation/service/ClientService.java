@@ -17,6 +17,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -49,7 +52,7 @@ public class ClientService {
     public ClientDetailsResponse getClientById(UUID id) {
         log.info("Getting client by id: {}", id);
 
-        Client client = clientRepository.findById(id)
+        Client client = clientRepository.findByIdWithAccounts(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.CLIENT_NOT_FOUND,
                         "Client not found with id: " + id));
 
@@ -133,11 +136,24 @@ public class ClientService {
             clientPage = clientRepository.findAll(pageable);
         }
 
+        List<UUID> clientIds = clientPage.getContent().stream()
+                .map(Client::getId)
+                .toList();
+
+        List<Object[]> results = clientRepository.countActiveAccountsForClients(clientIds);
+        Map<UUID, Long> activeAccountsCountMap = new HashMap<>();
+        for (Object[] row : results) {
+            UUID clientId = (UUID) row[0];
+            Long count = (Long) row[1];
+            activeAccountsCountMap.put(clientId, count);
+        }
+
         ClientPageResponse response = new ClientPageResponse();
         response.setContent(clientPage.getContent().stream()
                 .map(client -> {
                     ClientSearchResponse searchResponse = clientMapper.toSearchResponse(client);
-                    searchResponse.setActiveAccountsCount(countActiveAccounts(client));
+                    Long count = activeAccountsCountMap.getOrDefault(client.getId(), 0L);
+                    searchResponse.setActiveAccountsCount(count.intValue());
                     return searchResponse;
                 })
                 .toList());
