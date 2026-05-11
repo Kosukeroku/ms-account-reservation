@@ -17,10 +17,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +34,8 @@ public class ClientService {
 
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_SIZE = 20;
+
+    private static final List<String> ACTIVE_STATUSES = List.of("NEW", "IN_CREATION", "CREATED");
 
     @Transactional
     public ClientResponse createClient(ClientCreateRequest request) {
@@ -140,13 +144,13 @@ public class ClientService {
                 .map(Client::getId)
                 .toList();
 
-        List<Object[]> results = clientRepository.countActiveAccountsForClients(clientIds);
-        Map<UUID, Long> activeAccountsCountMap = new HashMap<>();
-        for (Object[] row : results) {
-            UUID clientId = (UUID) row[0];
-            Long count = (Long) row[1];
-            activeAccountsCountMap.put(clientId, count);
-        }
+        List<AccountCountProjection> projections = clientRepository.countActiveAccountsForClients(clientIds, ACTIVE_STATUSES);
+
+        Map<UUID, Long> activeAccountsCountMap = projections.stream()
+                .collect(Collectors.toMap(
+                        AccountCountProjection::getId,
+                        AccountCountProjection::getCount
+                ));
 
         ClientPageResponse response = new ClientPageResponse();
         response.setContent(clientPage.getContent().stream()

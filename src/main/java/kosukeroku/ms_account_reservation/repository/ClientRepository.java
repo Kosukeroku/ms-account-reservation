@@ -1,6 +1,7 @@
 package kosukeroku.ms_account_reservation.repository;
 
 
+import kosukeroku.ms_account_reservation.dto.AccountCountProjection;
 import kosukeroku.ms_account_reservation.model.Client;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,10 +34,9 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
     @Query("SELECT c FROM Client c WHERE c.id = :id")
     Optional<Client> findByIdWithAccounts(UUID id);
 
-    @Query("SELECT c.id, COUNT(a) FROM Client c LEFT JOIN c.accounts a " +
-            "WHERE a.status.name = kosukeroku.ms_account_reservation.model.enums.AccountStatusName.NEW " +
-            "OR a.status.name = kosukeroku.ms_account_reservation.model.enums.AccountStatusName.IN_CREATION " +
-            "OR a.status.name = kosukeroku.ms_account_reservation.model.enums.AccountStatusName.CREATED " +
+    @Query("SELECT c.id as id, COUNT(a) as count FROM Client c LEFT JOIN c.accounts a " +
+            "WHERE a.status.name IN :statuses " +
             "AND c.id IN :clientIds GROUP BY c.id")
-    List<Object[]> countActiveAccountsForClients(@Param("clientIds") List<UUID> clientIds);
+    List<AccountCountProjection> countActiveAccountsForClients(@Param("clientIds") List<UUID> clientIds,
+                                                               @Param("statuses") List<String> statuses);
 }
