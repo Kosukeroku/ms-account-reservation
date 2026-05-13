@@ -2,6 +2,8 @@ package kosukeroku.ms_account_reservation.service;
 
 import kosukeroku.ms_account_reservation.dto.*;
 import kosukeroku.ms_account_reservation.exception.ApiException;
+import kosukeroku.ms_account_reservation.kafka.event.EventType;
+import kosukeroku.ms_account_reservation.kafka.producer.ClientEventProducer;
 import kosukeroku.ms_account_reservation.mapper.ClientMapper;
 import kosukeroku.ms_account_reservation.model.Account;
 import kosukeroku.ms_account_reservation.model.AccountStatus;
@@ -31,6 +33,7 @@ public class ClientService {
 
     private final ClientRepository clientRepository;
     private final ClientMapper clientMapper;
+    private final ClientEventProducer clientEventProducer;
 
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_SIZE = 20;
@@ -48,6 +51,9 @@ public class ClientService {
         Client client = clientMapper.toEntity(request);
         Client savedClient = clientRepository.save(client);
         log.info("Client created with id: {}", savedClient.getId());
+
+        String eventId = UUID.randomUUID().toString();
+        clientEventProducer.sendClientEvent(savedClient.getId(), EventType.CREATED, eventId);
 
         return clientMapper.toResponse(savedClient);
     }
@@ -79,6 +85,9 @@ public class ClientService {
         Client updatedClient = clientRepository.save(client);
         log.info("Client updated with id: {}", updatedClient.getId());
 
+        String eventId = UUID.randomUUID().toString();
+        clientEventProducer.sendClientEvent(id, EventType.UPDATED, eventId);
+
         return clientMapper.toResponse(updatedClient);
     }
 
@@ -100,6 +109,9 @@ public class ClientService {
         client.setStatus(ClientStatus.DELETED);
         clientRepository.save(client);
         log.info("Client deleted with id: {}", id);
+
+        String eventId = UUID.randomUUID().toString();
+        clientEventProducer.sendClientEvent(id, EventType.DELETED, eventId);
     }
 
     @Transactional(readOnly = true)

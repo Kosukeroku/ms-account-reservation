@@ -27,6 +27,35 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: ${REDIS_TIMEOUT:5000}
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        acks: ${KAFKA_PRODUCER_ACKS:all}
+        retries: ${KAFKA_PRODUCER_RETRIES:3}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:client-events-group}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: "ClientChangedEvent:kosukeroku.ms_account_reservation.kafka.event.ClientChangedEvent"
+      enable-auto-commit: ${KAFKA_ENABLE_AUTO_COMMIT:false}
+    listener:
+      ack-mode: ${KAFKA_ACK_MODE:manual}
+      retry:
+        max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:3}
+        initial-interval: ${KAFKA_RETRY_INITIAL_INTERVAL:1000}
+        multiplier: ${KAFKA_RETRY_MULTIPLIER:2.0}
+
+kafka:
+  topic:
+    name: ${KAFKA_TOPIC_NAME:client-events}
+    partitions: ${KAFKA_TOPIC_PARTITIONS:3}
+    replication-factor: ${KAFKA_TOPIC_REPLICATION_FACTOR:1}
+
 server:
   port: ${PORT:8080}
 
