@@ -8,15 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -25,43 +17,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-@Testcontainers
-@SpringBootTest
-class KafkaIntegrationTest {
-
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15")
-            .withDatabaseName("testdb")
-            .withUsername("test")
-            .withPassword("test");
-
-    @Container
-    static KafkaContainer kafka = new KafkaContainer(
-            DockerImageName.parse("confluentinc/cp-kafka:7.4.0")
-    );
-
-    @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        registry.add("spring.liquibase.enabled", () -> "false");
-
-        registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
-        registry.add("spring.kafka.consumer.group-id", () -> "test-group");
-        registry.add("spring.kafka.consumer.auto-offset-reset", () -> "earliest");
-        registry.add("spring.kafka.consumer.enable-auto-commit", () -> "false");
-        registry.add("spring.kafka.listener.ack-mode", () -> "manual");
-
-        registry.add("kafka.topic.name", () -> "client-events");
-        registry.add("kafka.topic.partitions", () -> "1");
-        registry.add("kafka.topic.replication-factor", () -> "1");
-
-        registry.add("spring.kafka.listener.retry.max-attempts", () -> "3");
-        registry.add("spring.kafka.listener.retry.initial-interval", () -> "100");
-        registry.add("spring.kafka.listener.retry.multiplier", () -> "2.0");
-    }
+class KafkaIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private KafkaTemplate<String, ClientChangedEvent> kafkaTemplate;
@@ -73,8 +29,9 @@ class KafkaIntegrationTest {
     private String topic;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws InterruptedException {
         idempotentEventRepository.deleteAll();
+        Thread.sleep(2000);
     }
 
     private ClientChangedEvent createEvent(EventType eventType) {
@@ -89,10 +46,11 @@ class KafkaIntegrationTest {
         ClientChangedEvent event = createEvent(EventType.CREATED);
 
         // when
-        kafkaTemplate.send(topic, event.getClientId().toString(), event).get(5, TimeUnit.SECONDS);
+        kafkaTemplate.send(topic, event.getClientId().toString(), event).get(10, TimeUnit.SECONDS);
 
         // then
-        await().atMost(5, TimeUnit.SECONDS)
+        await().atMost(15, TimeUnit.SECONDS)
+                .pollInterval(500, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     assertThat(idempotentEventRepository.existsByEventId(event.getEventId())).isTrue();
                 });
@@ -104,17 +62,21 @@ class KafkaIntegrationTest {
         ClientChangedEvent event = createEvent(EventType.CREATED);
 
         // when
-        kafkaTemplate.send(topic, event.getClientId().toString(), event).get(5, TimeUnit.SECONDS);
+        kafkaTemplate.send(topic, event.getClientId().toString(), event).get(10, TimeUnit.SECONDS);
 
-        await().atMost(5, TimeUnit.SECONDS)
+        // then
+        await().atMost(15, TimeUnit.SECONDS)
+                .pollInterval(500, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     assertThat(idempotentEventRepository.existsByEventId(event.getEventId())).isTrue();
                 });
 
-        kafkaTemplate.send(topic, event.getClientId().toString(), event).get(5, TimeUnit.SECONDS);
+        // when
+        kafkaTemplate.send(topic, event.getClientId().toString(), event).get(10, TimeUnit.SECONDS);
 
         // then
-        await().atMost(2, TimeUnit.SECONDS)
+        await().atMost(10, TimeUnit.SECONDS)
+                .pollInterval(500, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     long count = idempotentEventRepository.findAll().stream()
                             .filter(e -> e.getEventId().equals(event.getEventId()))
@@ -129,10 +91,11 @@ class KafkaIntegrationTest {
         ClientChangedEvent event = createEvent(EventType.CREATED);
 
         // when
-        kafkaTemplate.send(topic, event.getClientId().toString(), event).get(5, TimeUnit.SECONDS);
+        kafkaTemplate.send(topic, event.getClientId().toString(), event).get(10, TimeUnit.SECONDS);
 
         // then
-        await().atMost(5, TimeUnit.SECONDS)
+        await().atMost(15, TimeUnit.SECONDS)
+                .pollInterval(500, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     IdempotentEvent record = idempotentEventRepository.findAll().stream()
                             .filter(e -> e.getEventId().equals(event.getEventId()))

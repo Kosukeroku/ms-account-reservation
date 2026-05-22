@@ -6,6 +6,7 @@ import kosukeroku.ms_account_reservation.kafka.event.EventType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "kafka.producer.enabled", havingValue = "true", matchIfMissing = true)
 public class ClientEventProducer {
 
     private final KafkaTemplate<String, ClientChangedEvent> kafkaTemplate;
@@ -27,12 +29,7 @@ public class ClientEventProducer {
     private final MeterRegistry meterRegistry;
 
     public void sendClientEvent(UUID clientId, EventType eventType, String eventId) {
-        ClientChangedEvent event = new ClientChangedEvent(
-                clientId,
-                eventType,
-                Instant.now(),
-                eventId
-        );
+        ClientChangedEvent event = new ClientChangedEvent(clientId, eventType, Instant.now(), eventId);
 
         CompletableFuture<SendResult<String, ClientChangedEvent>> future =
                 kafkaTemplate.send(topic, clientId.toString(), event);
@@ -40,6 +37,10 @@ public class ClientEventProducer {
         future.whenComplete((result, ex) -> {
             if (ex != null) {
                 log.error("Failed to send event for client {}: {}", clientId, ex.getMessage());
+                meterRegistry.counter("kafka.event.failed",
+                        "topic", topic,
+                        "eventType", eventType.name()
+                ).increment();
             } else {
                 meterRegistry.counter("kafka.event.published",
                         "topic", topic,

@@ -32,29 +32,18 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        acks: ${KAFKA_PRODUCER_ACKS:all}
-        retries: ${KAFKA_PRODUCER_RETRIES:3}
     consumer:
-      group-id: ${KAFKA_CONSUMER_GROUP:client-events-group}
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
         spring.json.type.mapping: "ClientChangedEvent:kosukeroku.ms_account_reservation.kafka.event.ClientChangedEvent"
-      enable-auto-commit: ${KAFKA_ENABLE_AUTO_COMMIT:false}
     listener:
-      ack-mode: ${KAFKA_ACK_MODE:manual}
+      ack-mode: manual
       retry:
-        max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:3}
-        initial-interval: ${KAFKA_RETRY_INITIAL_INTERVAL:1000}
-        multiplier: ${KAFKA_RETRY_MULTIPLIER:2.0}
-
-kafka:
-  topic:
-    name: ${KAFKA_TOPIC_NAME:client-events}
-    partitions: ${KAFKA_TOPIC_PARTITIONS:3}
-    replication-factor: ${KAFKA_TOPIC_REPLICATION_FACTOR:1}
+        max-attempts: 3
+        initial-interval: 1000
+        multiplier: 2.0
 
 server:
   port: ${PORT:8080}
@@ -73,6 +62,9 @@ management:
     metrics:
       export:
         enabled: true
+  health:
+    kafka:
+      enabled: true
 
 app:
   currency-client:
@@ -91,6 +83,24 @@ app:
     queue-capacity: ${APP_ASYNC_QUEUE_CAPACITY:100}
     thread-name-prefix: ${APP_ASYNC_THREAD_NAME_PREFIX:async-}
     timeout-seconds: ${APP_ASYNC_TIMEOUT_SECONDS:5}
+
+kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  enabled: ${KAFKA_ENABLED:true}
+  topic:
+    name: ${KAFKA_TOPIC_NAME:client-events}
+    partitions: ${KAFKA_TOPIC_PARTITIONS:3}
+    replication-factor: ${KAFKA_TOPIC_REPLICATION_FACTOR:1}
+    enabled: ${KAFKA_TOPIC_ENABLED:true}
+  consumer:
+    enabled: ${KAFKA_CONSUMER_ENABLED:true}
+    group-id: ${KAFKA_CONSUMER_GROUP:client-events-group}
+    concurrency: ${KAFKA_CONSUMER_CONCURRENCY:3}
+    max-poll-records: ${KAFKA_CONSUMER_MAX_POLL_RECORDS:500}
+  producer:
+    enabled: ${KAFKA_PRODUCER_ENABLED:true}
+    acks: ${KAFKA_PRODUCER_ACKS:all}
+    retries: ${KAFKA_PRODUCER_RETRIES:3}
 
 logging:
   level:

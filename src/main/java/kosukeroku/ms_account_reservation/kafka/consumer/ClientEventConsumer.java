@@ -1,47 +1,51 @@
 package kosukeroku.ms_account_reservation.kafka.consumer;
 
 import kosukeroku.ms_account_reservation.kafka.event.ClientChangedEvent;
-import kosukeroku.ms_account_reservation.model.IdempotentEvent;
-import kosukeroku.ms_account_reservation.kafka.repository.IdempotentEventRepository;
+import kosukeroku.ms_account_reservation.kafka.service.IdempotentEventService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class ClientEventConsumer {
 
-    private final IdempotentEventRepository idempotentEventRepository;
+    private final IdempotentEventService idempotentEventService;
+
+    @Value("${kafka.topic.name}")
+    private String topic;
 
     @KafkaListener(
             topics = "${kafka.topic.name}",
-            groupId = "${spring.kafka.consumer.group-id}"
+            groupId = "${kafka.consumer.group-id}",
+            concurrency = "${kafka.consumer.concurrency:3}",
+            containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional
-    public void consume(ClientChangedEvent event, Acknowledgment ack) {
-        log.info("Received event: clientId={}, type={}, eventId={}",
-                event.getClientId(), event.getEventType(), event.getEventId());
+    public void consume(ConsumerRecord<String, ClientChangedEvent> record, Acknowledgment ack) {
+        String key = record.key();
+        ClientChangedEvent event = record.value();
 
-        if (idempotentEventRepository.existsByEventId(event.getEventId())) {
-            log.info("Duplicate event detected, skipping: eventId={}", event.getEventId());
+        log.info("Received message from topic {}: key={}, clientId={}, type={}, eventId={}",
+                topic, key, event.getClientId(), event.getEventType(), event.getEventId());
+
+        if (idempotentEventService.isProcessed(event.getEventId())) {
+            log.info("Duplicate event detected, skipping: eventId={}, key={}", event.getEventId(), key);
             ack.acknowledge();
             return;
         }
 
-        IdempotentEvent record = new IdempotentEvent();
-        record.setEventId(event.getEventId());
-        record.setClientId(event.getClientId());
-        record.setEventType(event.getEventType().name());
-        record.setProcessedAt(LocalDateTime.now());
-        idempotentEventRepository.save(record);
+        idempotentEventService.saveProcessedEvent(
+                event.getEventId(),
+                event.getClientId(),
+                event.getEventType().name()
+        );
 
-        log.info("Processed event successfully: eventId={}", event.getEventId());
+        log.info("Processed event successfully: eventId={}, key={}", event.getEventId(), key);
 
         ack.acknowledge();
     }
