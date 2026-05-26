@@ -20,12 +20,12 @@ import static org.awaitility.Awaitility.await;
 class KafkaIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
-    private KafkaTemplate<String, ClientChangedEvent> kafkaTemplate;
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @Autowired
     private IdempotentEventRepository idempotentEventRepository;
 
-    @Value("${kafka.topic.name}")
+    @Value("${client-events.kafka.topic.name}")
     private String topic;
 
     @BeforeEach

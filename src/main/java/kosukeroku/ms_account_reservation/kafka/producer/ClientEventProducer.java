@@ -18,40 +18,37 @@ import java.util.concurrent.CompletableFuture;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@ConditionalOnProperty(name = "kafka.producer.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "client-events.kafka.producerEnabled", havingValue = "true", matchIfMissing = true)
 public class ClientEventProducer {
 
-    private final KafkaTemplate<String, ClientChangedEvent> kafkaTemplate;
-
-    @Value("${kafka.topic.name}")
-    private String topic;
-
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final MeterRegistry meterRegistry;
+
+    @Value("${client-events.kafka.topic.name}")
+    private String topic;
 
     public void sendClientEvent(UUID clientId, EventType eventType, String eventId) {
         ClientChangedEvent event = new ClientChangedEvent(clientId, eventType, Instant.now(), eventId);
+        String key = clientId.toString();
 
-        CompletableFuture<SendResult<String, ClientChangedEvent>> future =
-                kafkaTemplate.send(topic, clientId.toString(), event);
+        CompletableFuture<SendResult<String, Object>> future =
+                (CompletableFuture<SendResult<String, Object>>) kafkaTemplate.send(topic, key, event);
 
-        future.whenComplete((result, ex) -> {
-            if (ex != null) {
-                log.error("Failed to send event for client {}: {}", clientId, ex.getMessage());
-                meterRegistry.counter("kafka.event.failed",
-                        "topic", topic,
-                        "eventType", eventType.name()
-                ).increment();
-            } else {
-                meterRegistry.counter("kafka.event.published",
-                        "topic", topic,
-                        "eventType", eventType.name()
-                ).increment();
-
-                log.info("Event sent for client {}: offset={}, partition={}",
-                        clientId,
-                        result.getRecordMetadata().offset(),
-                        result.getRecordMetadata().partition());
-            }
+        future.thenApply(result -> {
+            log.info("Successfully delivered message to topic [{}]. Offset: {}, Partition: {}, Key: {}.",
+                    topic, result.getRecordMetadata().offset(), result.getRecordMetadata().partition(), key);
+            meterRegistry.counter("client-events.kafka.producer.success",
+                    "topic", topic,
+                    "eventType", eventType.name()
+            ).increment();
+            return result;
+        }).exceptionally(e -> {
+            log.error("Unable to send message. Key: {}, error: {}", key, e.getMessage(), e);
+            meterRegistry.counter("client-events.kafka.producer.error",
+                    "topic", topic,
+                    "eventType", eventType.name()
+            ).increment();
+            return null;
         });
     }
 }

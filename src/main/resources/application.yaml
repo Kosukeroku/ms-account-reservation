@@ -27,23 +27,6 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: ${REDIS_TIMEOUT:5000}
 
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-    consumer:
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
-        spring.json.type.mapping: "ClientChangedEvent:kosukeroku.ms_account_reservation.kafka.event.ClientChangedEvent"
-    listener:
-      ack-mode: manual
-      retry:
-        max-attempts: 3
-        initial-interval: 1000
-        multiplier: 2.0
 
 server:
   port: ${PORT:8080}
@@ -84,23 +67,31 @@ app:
     thread-name-prefix: ${APP_ASYNC_THREAD_NAME_PREFIX:async-}
     timeout-seconds: ${APP_ASYNC_TIMEOUT_SECONDS:5}
 
-kafka:
-  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-  enabled: ${KAFKA_ENABLED:true}
-  topic:
-    name: ${KAFKA_TOPIC_NAME:client-events}
-    partitions: ${KAFKA_TOPIC_PARTITIONS:3}
-    replication-factor: ${KAFKA_TOPIC_REPLICATION_FACTOR:1}
-    enabled: ${KAFKA_TOPIC_ENABLED:true}
-  consumer:
-    enabled: ${KAFKA_CONSUMER_ENABLED:true}
-    group-id: ${KAFKA_CONSUMER_GROUP:client-events-group}
-    concurrency: ${KAFKA_CONSUMER_CONCURRENCY:3}
-    max-poll-records: ${KAFKA_CONSUMER_MAX_POLL_RECORDS:500}
-  producer:
-    enabled: ${KAFKA_PRODUCER_ENABLED:true}
-    acks: ${KAFKA_PRODUCER_ACKS:all}
-    retries: ${KAFKA_PRODUCER_RETRIES:3}
+client-events:
+  kafka:
+    bootstrap-servers: ${CLIENT_EVENTS_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    topic:
+      name: ${CLIENT_EVENTS_KAFKA_TOPIC_NAME:client-events}
+    producer:
+      enabled: ${CLIENT_EVENTS_KAFKA_PRODUCER_ENABLED:true}
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: ${CLIENT_EVENTS_KAFKA_PRODUCER_ACKS:all}
+      retries: ${CLIENT_EVENTS_KAFKA_PRODUCER_RETRIES:3}
+    consumer:
+      enabled: ${CLIENT_EVENTS_KAFKA_CONSUMER_ENABLED:true}
+      group-id: ${CLIENT_EVENTS_KAFKA_CONSUMER_GROUP:client-events-group}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      max-poll-records: ${CLIENT_EVENTS_KAFKA_CONSUMER_MAX_POLL_RECORDS:500}
+      auto-offset-reset: ${CLIENT_EVENTS_KAFKA_CONSUMER_AUTO_OFFSET_RESET:earliest}
+      enable-auto-commit: ${CLIENT_EVENTS_KAFKA_CONSUMER_ENABLE_AUTO_COMMIT:false}
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: "ClientChangedEvent:kosukeroku.ms_account_reservation.kafka.event.ClientChangedEvent"
+    listener:
+      ack-mode: manual
+      concurrency: ${CLIENT_EVENTS_KAFKA_LISTENER_CONCURRENCY:3}
 
 logging:
   level:

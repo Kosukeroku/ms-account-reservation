@@ -1,6 +1,5 @@
 package kosukeroku.ms_account_reservation.kafka.health;
 
-import kosukeroku.ms_account_reservation.kafka.config.KafkaProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
