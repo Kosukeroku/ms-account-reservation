@@ -61,3 +61,59 @@
 
 **Результат:** 2 запроса (поиск + батч-подсчет)
 
+# UPGRB-13: Apache Kafka
+
+## Топик
+
+- Название: client-events
+- Количество партиций: 3 (KAFKA_TOPIC_PARTITIONS)
+- Фактор репликации: 1 (KAFKA_TOPIC_REPLICATION_FACTOR)
+- Ключ партиционирования: clientId
+
+## Формат события
+
+Событие в формате JSON:
+
+- clientId: UUID – ID клиента, который изменился
+- eventType: String – тип события (CREATED, UPDATED, DELETED)
+- timestamp: Instant - время создания события
+- eventId: String - уникальный ID события
+
+## Стратегия идемпотентности
+
+- Таблица idempotent_events в PostgreSQL с уникальным ограничением на event_id
+- При получении события consumer проверяет existsByEventId()
+- Если запись есть (дубликат), событие пропускается
+- Если нет, сохраняется запись и выполняется бизнес-логика
+
+## Настройки Producer
+| Параметр | Значение |
+|----------|----------|
+| acks | all |
+| retries | 3 |
+| key-serializer | StringSerializer |
+| value-serializer | JsonSerializer |
+
+## Настройки Consumer
+| Параметр | Значение |
+|----------|----------|
+| group-id | client-events-group |
+| enable-auto-commit | false |
+| ack-mode | manual |
+| auto-offset-reset | earliest |
+
+## Retry и Dead Letter Queue
+| Параметр | Значение |
+|----------|----------|
+| max-attempts | 3 |
+| initial-interval | 1000 |
+| multiplier | 2.0 |
+| dlt-suffix | .dlt |
+
+При 3 неудачных попытках сообщение отправляется в client-events.dlt.
+
+## Commit policy
+
+- Ручной commit (ack.acknowledge()) вызывается только после успешной обработки
+- При ошибке commit не происходит и сообщение будет перечитано
+- После 3 неудач сообщение уходит в DLQ

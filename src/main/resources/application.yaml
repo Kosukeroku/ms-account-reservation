@@ -27,6 +27,7 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: ${REDIS_TIMEOUT:5000}
 
+
 server:
   port: ${PORT:8080}
 
@@ -44,6 +45,9 @@ management:
     metrics:
       export:
         enabled: true
+  health:
+    kafka:
+      enabled: true
 
 app:
   currency-client:
@@ -62,6 +66,32 @@ app:
     queue-capacity: ${APP_ASYNC_QUEUE_CAPACITY:100}
     thread-name-prefix: ${APP_ASYNC_THREAD_NAME_PREFIX:async-}
     timeout-seconds: ${APP_ASYNC_TIMEOUT_SECONDS:5}
+
+client-events:
+  kafka:
+    bootstrap-servers: ${CLIENT_EVENTS_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    topic:
+      name: ${CLIENT_EVENTS_KAFKA_TOPIC_NAME:client-events}
+    producer:
+      enabled: ${CLIENT_EVENTS_KAFKA_PRODUCER_ENABLED:true}
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: ${CLIENT_EVENTS_KAFKA_PRODUCER_ACKS:all}
+      retries: ${CLIENT_EVENTS_KAFKA_PRODUCER_RETRIES:3}
+    consumer:
+      enabled: ${CLIENT_EVENTS_KAFKA_CONSUMER_ENABLED:true}
+      group-id: ${CLIENT_EVENTS_KAFKA_CONSUMER_GROUP:client-events-group}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      max-poll-records: ${CLIENT_EVENTS_KAFKA_CONSUMER_MAX_POLL_RECORDS:500}
+      auto-offset-reset: ${CLIENT_EVENTS_KAFKA_CONSUMER_AUTO_OFFSET_RESET:earliest}
+      enable-auto-commit: ${CLIENT_EVENTS_KAFKA_CONSUMER_ENABLE_AUTO_COMMIT:false}
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: "ClientChangedEvent:kosukeroku.ms_account_reservation.kafka.event.ClientChangedEvent"
+    listener:
+      ack-mode: manual
+      concurrency: ${CLIENT_EVENTS_KAFKA_LISTENER_CONCURRENCY:3}
 
 logging:
   level:
